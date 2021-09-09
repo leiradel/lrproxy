@@ -240,7 +240,7 @@ bool retro_unserialize(void const* data, size_t size) {
     init();
 
     bool const result = s_unserialize(data, size);
-    fprintf(stderr, "APILOG retro_serialize(%p, %zu) = %d\n", data, size, result);
+    fprintf(stderr, "APILOG retro_unserialize(%p, %zu) = %d\n", data, size, result);
 
     return result;
 }
