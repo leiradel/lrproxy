@@ -72,6 +72,8 @@ static void init(void) {
         return;
     }
 
+    fprintf(stderr, "APILOG Loading core \"%s\"\n", PROXY_FOR);
+
     s_handle = dynlib_open(PROXY_FOR);
 
     if (s_handle == NULL) {
