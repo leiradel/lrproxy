@@ -61,6 +61,7 @@ static size_t (*s_get_memory_size)(unsigned);
 
 #define CORE_DLSYM(prop, name) \
     do { \
+        fprintf(stderr, "APILOG Getting pointer to %s\n", name); \
         void* sym = dynlib_symbol(s_handle, name); \
         if (!sym) goto error; \
         memcpy(&prop, &sym, sizeof(prop)); \
@@ -74,6 +75,7 @@ static void init(void) {
     s_handle = dynlib_open(PROXY_FOR);
 
     if (s_handle == NULL) {
+        fprintf(stderr, "APILOG Error loading core: %s\n", dynlib_error());
         return;
     }
 
@@ -106,6 +108,7 @@ static void init(void) {
     return;
 
 error:
+    fprintf(stderr, "APILOG Couldn't find symbol: %s\n", dynlib_error());
     dynlib_close(s_handle);
     s_handle = NULL;
 }
