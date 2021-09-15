@@ -14,6 +14,8 @@ It's just two files, so just build a shared library out of them, using `-DPROXY_
 $ gcc -O2 -fPIC -shared -o proxy_core.so lrproxy.c dynlib.c
 ```
 
+If the amount of logging is too much, use `-DQUIET` to make it less verbose.
+
 ## TODO
 
 * Better logging of API arguments and returned values

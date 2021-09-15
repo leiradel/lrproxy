@@ -150,6 +150,14 @@ void retro_get_system_info(struct retro_system_info* info) {
 
     s_get_system_info(info);
     fprintf(stderr, TAG "retro_get_system_info(%p)\n", info);
+
+#ifndef QUIET
+    fprintf(stderr, TAG "    ->library_name     = \"%s\"\n", info->library_name);
+    fprintf(stderr, TAG "    ->library_version  = \"%s\"\n", info->library_version);
+    fprintf(stderr, TAG "    ->valid_extensions = \"%s\"\n", info->valid_extensions);
+    fprintf(stderr, TAG "    ->need_fullpath    = %d\n", info->need_fullpath);
+    fprintf(stderr, TAG "    ->block_extract    = %d\n", info->block_extract);
+#endif
 }
 
 void retro_get_system_av_info(struct retro_system_av_info* info) {
@@ -157,6 +165,16 @@ void retro_get_system_av_info(struct retro_system_av_info* info) {
 
     s_get_system_av_info(info);
     fprintf(stderr, TAG "retro_get_system_av_info(%p)\n", info);
+
+#ifndef QUIET
+    fprintf(stderr, TAG "    ->geometry.base_width   = %u\n", info->geometry.base_width);
+    fprintf(stderr, TAG "    ->geometry.base_height  = %u\n", info->geometry.base_height);
+    fprintf(stderr, TAG "    ->geometry.max_width    = %u\n", info->geometry.max_width);
+    fprintf(stderr, TAG "    ->geometry.max_height   = %u\n", info->geometry.max_height);
+    fprintf(stderr, TAG "    ->geometry.aspect_ratio = %f\n", info->geometry.aspect_ratio);
+    fprintf(stderr, TAG "    ->timing.fps            = %f\n", info->timing.fps);
+    fprintf(stderr, TAG "    ->timing.sample_rate    = %f\n", info->timing.sample_rate);
+#endif
 }
 
 void retro_set_environment(retro_environment_t cb) {
@@ -269,6 +287,13 @@ bool retro_load_game(struct retro_game_info const* game) {
     bool const result = s_load_game(game);
     fprintf(stderr, TAG "retro_load_game(%p) = %d\n", game, result);
 
+#ifndef QUIET
+    fprintf(stderr, TAG "    ->path = \"%s\"\n", game->path);
+    fprintf(stderr, TAG "    ->data = %p\n", game->data);
+    fprintf(stderr, TAG "    ->size = %zu\n", game->size);
+    fprintf(stderr, TAG "    ->meta = \"%s\"\n", game->meta);
+#endif
+
     return result;
 }
 
@@ -277,6 +302,15 @@ bool retro_load_game_special(unsigned game_type, struct retro_game_info const* i
 
     bool const result = s_load_game_special(game_type, info, num_info);
     fprintf(stderr, TAG "retro_load_game_special(%u, %p, %zu) = %d\n", game_type, info, num_info, result);
+
+#ifndef QUIET
+    for (size_t i = 0; i < num_info; i++) {
+        fprintf(stderr, TAG "    [%zu].path = \"%s\"\n", i, info[i].path);
+        fprintf(stderr, TAG "    [%zu].data = %p\n", i, info[i].data);
+        fprintf(stderr, TAG "    [%zu].size = %zu\n", i, info[i].size);
+        fprintf(stderr, TAG "    [%zu].meta = \"%s\"\n", i, info[i].meta);
+    }
+#endif
 
     return result;
 }
