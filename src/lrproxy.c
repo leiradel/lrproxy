@@ -61,13 +61,22 @@ static unsigned (*s_getRegion)(void);
 static void* (*s_get_memory_data)(unsigned);
 static size_t (*s_get_memory_size)(unsigned);
 
-#define CORE_DLSYM(prop, name) \
-    do { \
-        fprintf(stderr, TAG "Getting pointer to %s\n", name); \
-        void* sym = dynlib_symbol(s_handle, name); \
-        if (!sym) goto error; \
-        memcpy(&prop, &sym, sizeof(prop)); \
-    } while (0)
+#ifdef QUIET
+    #define CORE_DLSYM(prop, name) \
+        do { \
+            void* sym = dynlib_symbol(s_handle, name); \
+            if (!sym) goto error; \
+            memcpy(&prop, &sym, sizeof(prop)); \
+        } while (0)
+#else
+    #define CORE_DLSYM(prop, name) \
+        do { \
+            fprintf(stderr, TAG "Getting pointer to %s\n", name); \
+            void* sym = dynlib_symbol(s_handle, name); \
+            if (!sym) goto error; \
+            memcpy(&prop, &sym, sizeof(prop)); \
+        } while (0)
+#endif
 
 static void init(void) {
     if (s_handle != NULL) {
