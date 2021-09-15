@@ -22,8 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#define PROXY_FOR "/home/leiradel/.hackable-console/cores/dosbox_pure_libretro.so"
-
 #include "libretro.h"
 #include "dynlib.h"
 
@@ -31,6 +29,8 @@ SOFTWARE.
 #include <stdarg.h>
 #include <string.h>
 
+#define XSTR(s) STR(s)
+#define STR(s) #s
 static dynlib_t s_handle = NULL;
 
 static void (*s_init)(void);
@@ -72,9 +72,9 @@ static void init(void) {
         return;
     }
 
-    fprintf(stderr, "APILOG Loading core \"%s\"\n", PROXY_FOR);
+    fprintf(stderr, "APILOG Loading core \"%s\"\n", XSTR(PROXY_FOR));
 
-    s_handle = dynlib_open(PROXY_FOR);
+    s_handle = dynlib_open(XSTR(PROXY_FOR));
 
     if (s_handle == NULL) {
         fprintf(stderr, "APILOG Error loading core: %s\n", dynlib_error());

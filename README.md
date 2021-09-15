@@ -8,7 +8,7 @@ Edit `lrproxy.c` and change the `PROXY_FOR` macro at the top with the name of th
 
 ## Build
 
-It's just two files, so just build a shared library out of them:
+It's just two files, so just build a shared library out of them, using `-DPROXY_FOR=dosbox_pure_libretro.so` to specify the core you want it to load:
 
 ```
 $ gcc -O2 -fPIC -shared -o proxy_core.so lrproxy.c dynlib.c
