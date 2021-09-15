@@ -31,6 +31,8 @@ SOFTWARE.
 
 #define XSTR(s) STR(s)
 #define STR(s) #s
+#define TAG "[LRPROXY] "
+
 static dynlib_t s_handle = NULL;
 
 static void (*s_init)(void);
@@ -61,7 +63,7 @@ static size_t (*s_get_memory_size)(unsigned);
 
 #define CORE_DLSYM(prop, name) \
     do { \
-        fprintf(stderr, "APILOG Getting pointer to %s\n", name); \
+        fprintf(stderr, TAG "Getting pointer to %s\n", name); \
         void* sym = dynlib_symbol(s_handle, name); \
         if (!sym) goto error; \
         memcpy(&prop, &sym, sizeof(prop)); \
@@ -72,12 +74,12 @@ static void init(void) {
         return;
     }
 
-    fprintf(stderr, "APILOG Loading core \"%s\"\n", XSTR(PROXY_FOR));
+    fprintf(stderr, TAG "Loading core \"%s\"\n", XSTR(PROXY_FOR));
 
     s_handle = dynlib_open(XSTR(PROXY_FOR));
 
     if (s_handle == NULL) {
-        fprintf(stderr, "APILOG Error loading core: %s\n", dynlib_error());
+        fprintf(stderr, TAG "Error loading core: %s\n", dynlib_error());
         return;
     }
 
@@ -110,7 +112,7 @@ static void init(void) {
     return;
 
 error:
-    fprintf(stderr, "APILOG Couldn't find symbol: %s\n", dynlib_error());
+    fprintf(stderr, TAG "Couldn't find symbol: %s\n", dynlib_error());
     dynlib_close(s_handle);
     s_handle = NULL;
 }
@@ -121,14 +123,14 @@ void retro_init(void) {
     init();
 
     s_init();
-    fprintf(stderr, "APILOG retro_init()\n");
+    fprintf(stderr, TAG "retro_init()\n");
 }
 
 void retro_deinit(void) {
     init();
 
     s_deinit();
-    fprintf(stderr, "APILOG retro_deinit()\n");
+    fprintf(stderr, TAG "retro_deinit()\n");
 
     dynlib_close(s_handle);
     s_handle = NULL;
@@ -138,7 +140,7 @@ unsigned retro_api_version(void) {
     init();
 
     unsigned const result = s_api_version();
-    fprintf(stderr, "APILOG retro_api_version() = %u\n", result);
+    fprintf(stderr, TAG "retro_api_version() = %u\n", result);
 
     return result;
 }
@@ -147,84 +149,84 @@ void retro_get_system_info(struct retro_system_info* info) {
     init();
 
     s_get_system_info(info);
-    fprintf(stderr, "APILOG retro_get_system_info(%p)\n", info);
+    fprintf(stderr, TAG "retro_get_system_info(%p)\n", info);
 }
 
 void retro_get_system_av_info(struct retro_system_av_info* info) {
     init();
 
     s_get_system_av_info(info);
-    fprintf(stderr, "APILOG retro_get_system_av_info(%p)\n", info);
+    fprintf(stderr, TAG "retro_get_system_av_info(%p)\n", info);
 }
 
 void retro_set_environment(retro_environment_t cb) {
     init();
 
     s_set_environment(cb);
-    fprintf(stderr, "APILOG retro_set_environment(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_environment(%p)\n", cb);
 }
 
 void retro_set_video_refresh(retro_video_refresh_t cb) {
     init();
 
     s_set_video_refresh(cb);
-    fprintf(stderr, "APILOG retro_set_video_refresh(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_video_refresh(%p)\n", cb);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb) {
     init();
 
     s_set_audio_sample(cb);
-    fprintf(stderr, "APILOG retro_set_audio_sample(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_audio_sample(%p)\n", cb);
 }
 
 void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) {
     init();
 
     s_set_audio_sample_batch(cb);
-    fprintf(stderr, "APILOG retro_set_audio_sample_batch(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_audio_sample_batch(%p)\n", cb);
 }
 
 void retro_set_input_poll(retro_input_poll_t cb) {
     init();
 
     s_set_input_poll(cb);
-    fprintf(stderr, "APILOG retro_set_input_poll(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_input_poll(%p)\n", cb);
 }
 
 void retro_set_input_state(retro_input_state_t cb) {
     init();
 
     s_set_input_state(cb);
-    fprintf(stderr, "APILOG retro_set_input_state(%p)\n", cb);
+    fprintf(stderr, TAG "retro_set_input_state(%p)\n", cb);
 }
 
 void retro_set_controller_port_device(unsigned port, unsigned device) {
     init();
 
     s_set_controller_port_device(port, device);
-    fprintf(stderr, "APILOG retro_set_controller_port_device(%u, %u)\n", port, device);
+    fprintf(stderr, TAG "retro_set_controller_port_device(%u, %u)\n", port, device);
 }
 
 void retro_reset(void) {
     init();
 
     s_reset();
-    fprintf(stderr, "APILOG retro_reset()\n");
+    fprintf(stderr, TAG "retro_reset()\n");
 }
 
 void retro_run(void) {
     init();
 
     s_run();
-    fprintf(stderr, "APILOG retro_run()\n");
+    fprintf(stderr, TAG "retro_run()\n");
 }
 
 size_t retro_serialize_size(void) {
     init();
 
     size_t const result = s_serialize_size();
-    fprintf(stderr, "APILOG retro_serialize_size() = %zu\n", result);
+    fprintf(stderr, TAG "retro_serialize_size() = %zu\n", result);
 
     return result;
 }
@@ -233,7 +235,7 @@ bool retro_serialize(void* data, size_t size) {
     init();
 
     bool const result = s_serialize(data, size);
-    fprintf(stderr, "APILOG retro_serialize(%p, %zu) = %d\n", data, size, result);
+    fprintf(stderr, TAG "retro_serialize(%p, %zu) = %d\n", data, size, result);
 
     return result;
 }
@@ -242,7 +244,7 @@ bool retro_unserialize(void const* data, size_t size) {
     init();
 
     bool const result = s_unserialize(data, size);
-    fprintf(stderr, "APILOG retro_unserialize(%p, %zu) = %d\n", data, size, result);
+    fprintf(stderr, TAG "retro_unserialize(%p, %zu) = %d\n", data, size, result);
 
     return result;
 }
@@ -251,21 +253,21 @@ void retro_cheat_reset(void) {
     init();
 
     s_cheat_reset();
-    fprintf(stderr, "APILOG retro_cheat_reset()\n");
+    fprintf(stderr, TAG "retro_cheat_reset()\n");
 }
 
 void retro_cheat_set(unsigned index, bool enabled, char const* code) {
     init();
 
     s_cheat_set(index, enabled, code);
-    fprintf(stderr, "APILOG retro_cheat_set(%u, %d, \"%s\")\n", index, enabled, code);
+    fprintf(stderr, TAG "retro_cheat_set(%u, %d, \"%s\")\n", index, enabled, code);
 }
 
 bool retro_load_game(struct retro_game_info const* game) {
     init();
 
     bool const result = s_load_game(game);
-    fprintf(stderr, "APILOG retro_load_game(%p) = %d\n", game, result);
+    fprintf(stderr, TAG "retro_load_game(%p) = %d\n", game, result);
 
     return result;
 }
@@ -274,7 +276,7 @@ bool retro_load_game_special(unsigned game_type, struct retro_game_info const* i
     init();
 
     bool const result = s_load_game_special(game_type, info, num_info);
-    fprintf(stderr, "APILOG retro_load_game_special(%u, %p, %zu) = %d\n", game_type, info, num_info, result);
+    fprintf(stderr, TAG "retro_load_game_special(%u, %p, %zu) = %d\n", game_type, info, num_info, result);
 
     return result;
 }
@@ -283,14 +285,14 @@ void retro_unload_game(void) {
     init();
 
     s_unload_game();
-    fprintf(stderr, "APILOG retro_unload_game()\n");
+    fprintf(stderr, TAG "retro_unload_game()\n");
 }
 
 unsigned retro_get_region(void) {
     init();
 
     unsigned const result = s_getRegion();
-    fprintf(stderr, "APILOG retro_get_region() = %u\n", result);
+    fprintf(stderr, TAG "retro_get_region() = %u\n", result);
 
     return result;
 }
@@ -299,7 +301,7 @@ void* retro_get_memory_data(unsigned id) {
     init();
 
     void* const result = s_get_memory_data(id);
-    fprintf(stderr, "APILOG retro_get_memory_data(%u) = %p\n", id, result);
+    fprintf(stderr, TAG "retro_get_memory_data(%u) = %p\n", id, result);
 
     return result;
 }
@@ -308,7 +310,7 @@ size_t retro_get_memory_size(unsigned id) {
     init();
 
     size_t const result = s_get_memory_size(id);
-    fprintf(stderr, "APILOG retro_get_memory_size(%u) = %zu\n", id, result);
+    fprintf(stderr, TAG "retro_get_memory_size(%u) = %zu\n", id, result);
 
     return result;
 }
