@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <string.h>
 
 #define XSTR(s) STR(s)
@@ -265,6 +266,61 @@ static char const* device_id_str(unsigned const device, unsigned const id) {
     return unknown;
 }
 
+static char const* hw_context_type_str(enum retro_hw_context_type const ctxtype)
+{
+    static char unknown[32];
+
+    switch (ctxtype) {
+        case RETRO_HW_CONTEXT_NONE: return "RETRO_HW_CONTEXT_NONE";
+        case RETRO_HW_CONTEXT_OPENGL: return "RETRO_HW_CONTEXT_OPENGL";
+        case RETRO_HW_CONTEXT_OPENGLES2: return "RETRO_HW_CONTEXT_OPENGLES2";
+        case RETRO_HW_CONTEXT_OPENGL_CORE: return "RETRO_HW_CONTEXT_OPENGL_CORE";
+        case RETRO_HW_CONTEXT_OPENGLES3: return "RETRO_HW_CONTEXT_OPENGLES3";
+        case RETRO_HW_CONTEXT_OPENGLES_VERSION: return "RETRO_HW_CONTEXT_OPENGLES_VERSION";
+        case RETRO_HW_CONTEXT_VULKAN: return "RETRO_HW_CONTEXT_VULKAN";
+        case RETRO_HW_CONTEXT_DIRECT3D: return "RETRO_HW_CONTEXT_DIRECT3D";
+        case RETRO_HW_CONTEXT_DUMMY: return "RETRO_HW_CONTEXT_DUMMY";
+
+        default:
+            snprintf(unknown, sizeof(unknown), "%d", ctxtype);
+            return unknown;
+    }
+}
+
+static void log_device_capabilities(uint64_t const caps) {
+    fprintf(stderr, TAG "    =");
+
+    if (caps == 0) {
+        fprintf(stderr, " -");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_JOYPAD)) {
+        fprintf(stderr," RETRO_DEVICE_JOYPAD");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_MOUSE)) {
+        fprintf(stderr," RETRO_DEVICE_MOUSE");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_KEYBOARD)) {
+        fprintf(stderr," RETRO_DEVICE_KEYBOARD");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_LIGHTGUN)) {
+        fprintf(stderr," RETRO_DEVICE_LIGHTGUN");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_ANALOG)) {
+        fprintf(stderr," RETRO_DEVICE_ANALOG");
+    }
+
+    if (caps & (1 << RETRO_DEVICE_POINTER)) {
+        fprintf(stderr," RETRO_DEVICE_POINTER");
+    }
+
+    fprintf(stderr, "\n");
+}
+
 static bool environment(unsigned cmd, void* data) {
     bool const result = s_env(cmd, data);
 
@@ -285,9 +341,9 @@ static bool environment(unsigned cmd, void* data) {
             fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_MESSAGE(%p) = %d\n", data, result);
 
 #ifndef QUIET
-            struct retro_message const* const message = (struct retro_message const*)data;
-            fprintf(stderr, TAG "    ->msg    = \"%s\"\n", message->msg);
-            fprintf(stderr, TAG "    ->frames = %u\n", message->frames);
+            struct retro_message const* const rec = (struct retro_message const*)data;
+            fprintf(stderr, TAG "    ->msg    = \"%s\"\n", rec->msg);
+            fprintf(stderr, TAG "    ->frames = %u\n", rec->frames);
 #endif
 
             break;
@@ -306,8 +362,8 @@ static bool environment(unsigned cmd, void* data) {
             break;
 
         case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
-            enum retro_pixel_format const format = *(enum retro_pixel_format const*)data;
-            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_PIXEL_FORMAT(%s) = %d\n", pixel_format_str(format), result);
+            enum retro_pixel_format const val = *(enum retro_pixel_format const*)data;
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_PIXEL_FORMAT(%s) = %d\n", pixel_format_str(val), result);
             break;
         }
 
@@ -315,172 +371,159 @@ static bool environment(unsigned cmd, void* data) {
             fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS(%p) = %d\n", data, result);
 
 #ifndef QUIET
-            struct retro_input_descriptor const* desc = (struct retro_input_descriptor const*)data;
-            unsigned i = 0;
+            struct retro_input_descriptor const* rec = (struct retro_input_descriptor const*)data;
 
-            for (; desc->description != NULL; desc++, i++) {
-                fprintf(stderr, TAG "    [%u].port        = %u\n", i, desc->port);
+            for (unsigned i = 0; rec->description != NULL; rec++, i++) {
+                fprintf(stderr, TAG "    [%u].port        = %u\n", i, rec->port);
 
                 fprintf(
                     stderr, TAG "    [%u].device      = %u << RETRO_DEVICE_TYPE_SHIFT | %s\n",
-                    i, desc->device >> RETRO_DEVICE_TYPE_SHIFT, device_str(desc->device)
+                    i, rec->device >> RETRO_DEVICE_TYPE_SHIFT, device_str(rec->device)
                 );
 
-                fprintf(stderr, TAG "    [%u].index       = %s\n", i, device_index_str(desc->device, desc->index));
-                fprintf(stderr, TAG "    [%u].id          = %s\n", i, device_id_str(desc->device, desc->id));
-                fprintf(stderr, TAG "    [%u].description = \"%s\"\n", i, desc->description);
+                fprintf(stderr, TAG "    [%u].index       = %s\n", i, device_index_str(rec->device, rec->index));
+                fprintf(stderr, TAG "    [%u].id          = %s\n", i, device_id_str(rec->device, rec->id));
+                fprintf(stderr, TAG "    [%u].description = \"%s\"\n", i, rec->description);
             }
 #endif
 
             break;
         }
-        case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
-                                           /* const struct retro_keyboard_callback * --
-                                            * Sets a callback function used to notify core about keyboard events.
-                                            */
-        case RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE:
-                                           /* const struct retro_disk_control_callback * --
-                                            * Sets an interface which frontend can use to eject and insert
-                                            * disk images.
-                                            * This is used for games which consist of multiple images and
-                                            * must be manually swapped out by the user (e.g. PSX).
-                                            */
-        case RETRO_ENVIRONMENT_SET_HW_RENDER:
-                                           /* struct retro_hw_render_callback * --
-                                            * Sets an interface to let a libretro core render with
-                                            * hardware acceleration.
-                                            * Should be called in retro_load_game().
-                                            * If successful, libretro cores will be able to render to a
-                                            * frontend-provided framebuffer.
-                                            * The size of this framebuffer will be at least as large as
-                                            * max_width/max_height provided in get_av_info().
-                                            * If HW rendering is used, pass only RETRO_HW_FRAME_BUFFER_VALID or
-                                            * NULL to retro_video_refresh_t.
-                                            */
-        case RETRO_ENVIRONMENT_GET_VARIABLE:
-                                           /* struct retro_variable * --
-                                            * Interface to acquire user-defined information from environment
-                                            * that cannot feasibly be supported in a multi-system way.
-                                            * 'key' should be set to a key which has already been set by
-                                            * SET_VARIABLES.
-                                            * 'data' will be set to a value or NULL.
-                                            */
-        case RETRO_ENVIRONMENT_SET_VARIABLES:
-                                           /* const struct retro_variable * --
-                                            * Allows an implementation to signal the environment
-                                            * which variables it might want to check for later using
-                                            * GET_VARIABLE.
-                                            * This allows the frontend to present these variables to
-                                            * a user dynamically.
-                                            * This should be called the first time as early as
-                                            * possible (ideally in retro_set_environment).
-                                            * Afterward it may be called again for the core to communicate
-                                            * updated options to the frontend, but the number of core
-                                            * options must not change from the number in the initial call.
-                                            *
-                                            * 'data' points to an array of retro_variable structs
-                                            * terminated by a { NULL, NULL } element.
-                                            * retro_variable::key should be namespaced to not collide
-                                            * with other implementations' keys. E.g. A core called
-                                            * 'foo' should use keys named as 'foo_option'.
-                                            * retro_variable::value should contain a human readable
-                                            * description of the key as well as a '|' delimited list
-                                            * of expected values.
-                                            *
-                                            * The number of possible options should be very limited,
-                                            * i.e. it should be feasible to cycle through options
-                                            * without a keyboard.
-                                            *
-                                            * First entry should be treated as a default.
-                                            *
-                                            * Example entry:
-                                            * { "foo_option", "Speed hack coprocessor X; false|true" }
-                                            *
-                                            * Text before first ';' is description. This ';' must be
-                                            * followed by a space, and followed by a list of possible
-                                            * values split up with '|'.
-                                            *
-                                            * Only strings are operated on. The possible values will
-                                            * generally be displayed and stored as-is by the frontend.
-                                            */
-        case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-                                           /* bool * --
-                                            * Result is set to true if some variables are updated by
-                                            * frontend since last call to RETRO_ENVIRONMENT_GET_VARIABLE.
-                                            * Variables should be queried with GET_VARIABLE.
-                                            */
-        case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
-                                           /* const bool * --
-                                            * If true, the libretro implementation supports calls to
-                                            * retro_load_game() with NULL as argument.
-                                            * Used by cores which can run without particular game data.
-                                            * This should be called within retro_set_environment() only.
-                                            */
-        case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
-                                           /* const char ** --
-                                            * Retrieves the absolute path from where this libretro
-                                            * implementation was loaded.
-                                            * NULL is returned if the libretro was loaded statically
-                                            * (i.e. linked statically to frontend), or if the path cannot be
-                                            * determined.
-                                            * Mostly useful in cooperation with SET_SUPPORT_NO_GAME as assets can
-                                            * be loaded without ugly hacks.
-                                            */
 
-                                           /* Environment 20 was an obsolete version of SET_AUDIO_CALLBACK.
-                                            * It was not used by any known core at the time,
-                                            * and was removed from the API. */
-        case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK:
-                                           /* const struct retro_frame_time_callback * --
-                                            * Lets the core know how much time has passed since last
-                                            * invocation of retro_run().
-                                            * The frontend can tamper with the timing to fake fast-forward,
-                                            * slow-motion, frame stepping, etc.
-                                            * In this case the delta time will use the reference value
-                                            * in frame_time_callback..
-                                            */
-        case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK:
-                                           /* const struct retro_audio_callback * --
-                                            * Sets an interface which is used to notify a libretro core about audio
-                                            * being available for writing.
-                                            * The callback can be called from any thread, so a core using this must
-                                            * have a thread safe audio implementation.
-                                            * It is intended for games where audio and video are completely
-                                            * asynchronous and audio can be generated on the fly.
-                                            * This interface is not recommended for use with emulators which have
-                                            * highly synchronous audio.
-                                            *
-                                            * The callback only notifies about writability; the libretro core still
-                                            * has to call the normal audio callbacks
-                                            * to write audio. The audio callbacks must be called from within the
-                                            * notification callback.
-                                            * The amount of audio data to write is up to the implementation.
-                                            * Generally, the audio callback will be called continously in a loop.
-                                            *
-                                            * Due to thread safety guarantees and lack of sync between audio and
-                                            * video, a frontend  can selectively disallow this interface based on
-                                            * internal configuration. A core using this interface must also
-                                            * implement the "normal" audio interface.
-                                            *
-                                            * A libretro core using SET_AUDIO_CALLBACK should also make use of
-                                            * SET_FRAME_TIME_CALLBACK.
-                                            */
-        case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE:
-                                           /* struct retro_rumble_interface * --
-                                            * Gets an interface which is used by a libretro core to set
-                                            * state of rumble motors in controllers.
-                                            * A strong and weak motor is supported, and they can be
-                                            * controlled indepedently.
-                                            */
-        case RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES:
-                                           /* uint64_t * --
-                                            * Gets a bitmask telling which device type are expected to be
-                                            * handled properly in a call to retro_input_state_t.
-                                            * Devices which are not handled or recognized always return
-                                            * 0 in retro_input_state_t.
-                                            * Example bitmask: caps = (1 << RETRO_DEVICE_JOYPAD) | (1 << RETRO_DEVICE_ANALOG).
-                                            * Should only be called in retro_run().
-                                            */
+        case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK(%p) = %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_keyboard_callback const* const rec = (struct retro_keyboard_callback const*)data;
+            fprintf(stderr, TAG "    ->callback = %p\n", rec->callback);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE(%p) = %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_disk_control_callback const* const rec = (struct retro_disk_control_callback*)data;
+            fprintf(stderr, TAG "    ->set_eject_state     = %p\n", rec->set_eject_state);
+            fprintf(stderr, TAG "    ->get_eject_state     = %p\n", rec->get_eject_state);
+            fprintf(stderr, TAG "    ->get_image_index     = %p\n", rec->get_image_index);
+            fprintf(stderr, TAG "    ->set_image_index     = %p\n", rec->set_image_index);
+            fprintf(stderr, TAG "    ->get_num_images      = %p\n", rec->get_num_images);
+            fprintf(stderr, TAG "    ->replace_image_index = %p\n", rec->replace_image_index);
+            fprintf(stderr, TAG "    ->add_image_index     = %p\n", rec->add_image_index);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_SET_HW_RENDER: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_HW_RENDER(%p) = %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_hw_render_callback const* const rec = (struct retro_hw_render_callback*)data;
+            fprintf(stderr, TAG "    ->context_type            = %s\n", hw_context_type_str(rec->context_type));
+            fprintf(stderr, TAG "    ->context_reset           = %p\n", rec->context_reset);
+            fprintf(stderr, TAG "    ->get_current_framebuffer = %p\n", rec->get_current_framebuffer);
+            fprintf(stderr, TAG "    ->get_proc_address        = %p\n", rec->get_proc_address);
+            fprintf(stderr, TAG "    ->depth                   = %d\n", rec->depth);
+            fprintf(stderr, TAG "    ->stencil                 = %d\n", rec->stencil);
+            fprintf(stderr, TAG "    ->bottom_left_origin      = %d\n", rec->bottom_left_origin);
+            fprintf(stderr, TAG "    ->version_major           = %u\n", rec->version_major);
+            fprintf(stderr, TAG "    ->version_minor           = %u\n", rec->version_minor);
+            fprintf(stderr, TAG "    ->cache_context           = %d\n", rec->cache_context);
+            fprintf(stderr, TAG "    ->context_destroy         = %p\n", rec->context_destroy);
+            fprintf(stderr, TAG "    ->debug_context           = %d\n", rec->debug_context);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_GET_VARIABLE: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_GET_VARIABLE() = %p, %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_variable const* const rec = (struct retro_variable*)data;
+            fprintf(stderr, TAG "    ->key   = \"%s\"\n", rec->key);
+            fprintf(stderr, TAG "    ->value = \"%s\"\n", rec->value);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_SET_VARIABLES: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_VARIABLES(%p), %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_variable const* rec = (struct retro_variable const*)data;
+
+            for (unsigned i = 0; rec->key != NULL; rec++, i++) {
+                fprintf(stderr, TAG "    [%u].key   = \"%s\"\n", i, rec->key);
+                fprintf(stderr, TAG "    [%u].value = \"%s\"\n", i, rec->value);
+            }
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE() = %d, %d\n", *(bool*)data, result);
+            break;
+
+        case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME(%d) = %d\n", *(bool const*)data, result);
+            break;
+
+        case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH:
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_GET_LIBRETRO_PATH() = \"%s\", %d\n", *(char const**)data, result);
+            break;
+
+        case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK(%p) = %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_frame_time_callback const* const rec = (struct retro_frame_time_callback*)data;
+            fprintf(stderr, TAG "    ->callback  = %p\n", rec->callback);
+            fprintf(stderr, TAG "    ->reference = %" PRId64 "\n", rec->reference);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK(%p) = %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_audio_callback const* const rec = (struct retro_audio_callback*)data;
+            fprintf(stderr, TAG "    ->callback  = %p\n", rec->callback);
+            fprintf(stderr, TAG "    ->set_state = %p\n", rec->set_state);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE() = %p, %d\n", data, result);
+
+#ifndef QUIET
+            struct retro_rumble_interface const* const rec = (struct retro_rumble_interface*)data;
+            fprintf(stderr, TAG "    ->set_rumble_state = %p\n", rec->set_rumble_state);
+#endif
+
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES: {
+            fprintf(stderr, TAG "RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES() = %02" PRIx64 ", %d\n", *(uint64_t*)data, result);
+
+#ifndef QUIET
+            log_device_capabilities(*(uint64_t*)data);
+#endif
+
+            break;
+        }
+
         case RETRO_ENVIRONMENT_GET_SENSOR_INTERFACE:
                                            /* struct retro_sensor_interface * --
                                             * Gets access to the sensor interface.
